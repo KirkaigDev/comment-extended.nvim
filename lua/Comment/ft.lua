@@ -48,10 +48,10 @@ local L = setmetatable({
 	beancount = { M.semicolon },
 	bib = { M.latex },
 	blueprint = { M.cxx_l }, -- Blueprint doesn't have block comments
+	c = { M.cxx_l, M.cxx_b },
 	cabal = { M.dash },
 	cairo = { M.cxx_l },
 	cmake = { M.hash, M.hash_bracket },
-	c = { M.cxx_l, M.cxx_b },
 	conf = { M.hash },
 	conkyrc = { M.dash, M.dash_bracket },
 	coq = { M.fsharp_b, M.fsharp_b },
@@ -92,11 +92,11 @@ local L = setmetatable({
 	haxe = { M.cxx_l, M.cxx_b },
 	hcl = { M.hash, M.cxx_b },
 	heex = { M.html, M.html },
-	htmldjango = { M.html, M.html },
 	html = { M.html, M.html },
+	htmldjango = { M.html, M.html },
 	hyprlang = { M.hash },
-	idris2 = { M.dash, M.haskell_b },
 	idris = { M.dash, M.haskell_b },
+	idris2 = { M.dash, M.haskell_b },
 	ini = { M.hash },
 	jai = { M.cxx_l, M.cxx_b },
 	java = { M.cxx_l, M.cxx_b },
@@ -108,8 +108,8 @@ local L = setmetatable({
 	julia = { M.hash, '#=%s=#' },
 	kdl = { M.cxx_l, M.cxx_b },
 	kotlin = { M.cxx_l, M.cxx_b },
-	lean3 = { M.dash, M.lean_b },
 	lean = { M.dash, M.lean_b },
+	lean3 = { M.dash, M.lean_b },
 	lidris = { M.dash, M.haskell_b },
 	lilypond = { M.latex, '%{%s%}' },
 	lisp = { M.lisp_l, M.lisp_b },
@@ -139,6 +139,7 @@ local L = setmetatable({
 	purescript = { M.dash, M.haskell_b },
 	python = { M.hash }, -- Python doesn't have block comments
 	quarto = { M.html, M.html },
+	r = { M.hash }, -- R doesn't have block comments
 	racket = { M.lisp_l, M.lisp_b },
 	rasi = { M.cxx_l, M.cxx_b },
 	readline = { M.hash },
@@ -146,7 +147,6 @@ local L = setmetatable({
 	rego = { M.hash },
 	remind = { M.hash },
 	rescript = { M.cxx_l, M.cxx_b },
-	r = { M.hash }, -- R doesn't have block comments
 	robot = { M.hash }, -- Robotframework doesn't have block comments
 	ron = { M.cxx_l, M.cxx_b },
 	ruby = { M.hash, M.ruby_block },
@@ -178,12 +178,12 @@ local L = setmetatable({
 	typescript = { M.cxx_l, M.cxx_b },
 	typescriptreact = { M.cxx_l, M.cxx_b },
 	typst = { M.cxx_l, M.cxx_b },
+	v = { M.cxx_l, M.cxx_b },
 	vala = { M.cxx_l, M.cxx_b },
 	verilog = { M.cxx_l },
 	vhdl = { M.dash },
 	vifm = { M.vim },
 	vim = { M.vim },
-	v = { M.cxx_l, M.cxx_b },
 	vue = { M.html, M.html },
 	wgsl = { M.cxx_l, M.cxx_b },
 	xdefaults = { '!%s' },
@@ -293,9 +293,9 @@ end
 ---@return nil|string #Commentstring
 ---@see comment.utils.CommentCtx
 function ft.calculate(ctx)
-	local ok, parser = pcall(vim.treesitter.get_parser, A.nvim_get_current_buf())
+	local _, parser = pcall(vim.treesitter.get_parser, A.nvim_get_current_buf())
 
-	if not ok then
+	if not parser then
 		return ft.get(vim.bo.filetype, ctx.ctype) --[[ @as string ]]
 	end
 
