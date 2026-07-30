@@ -297,9 +297,13 @@ function ft.calculate(ctx)
 	local _, parser = pcall(vim.treesitter.get_parser, A.nvim_get_current_buf())
 
 	if not parser then
-		return ft.get(vim.bo.filetype, ctx.ctype) --[[ @as string ]]
-	elseif Config:get().optimistic_comments then
-		return Config:get().optimistic_comments_syntax --[[ @as string ]]
+		local filetype_comment = ft.get(vim.bo.filetype, ctx.ctype) --[[ @as string ]]
+
+		if not filetype_comment and Config:get().optimistic_comments then
+			return Config:get().optimistic_comments_syntax --[[ @as string ]]
+		else
+			return filetype_comment
+		end
 	end
 
 	local lang = ft.contains(parser, {
