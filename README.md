@@ -22,7 +22,7 @@
 ```lua
 -- add this to your lua/plugins.lua, lua/plugins/init.lua,  or the file you keep your other plugins:
 {
-    'numToStr/Comment.nvim',
+    'KirkaigDev/comment-extended.nvim',
     opts = {
         -- add any options here
     }
@@ -34,7 +34,7 @@
 
 ```lua
 use {
-    'numToStr/Comment.nvim',
+    'KirkaigDev/comment-extended.nvim',
     config = function()
         require('Comment').setup()
     end
@@ -44,7 +44,7 @@ use {
 - With [vim-plug](https://github.com/junegunn/vim-plug)
 
 ```vim
-Plug 'numToStr/Comment.nvim'
+Plug 'KirkaigDev/comment-extended.nvim'
 
 " Somewhere after plug#end()
 lua require('Comment').setup()
