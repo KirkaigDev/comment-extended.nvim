@@ -15,6 +15,7 @@
 ---      mappings = { basic = true, extra = true },
 ---      pre_hook = nil,
 ---      post_hook = nil,
+---      optimistic_comments = true,
 ---  }
 ---<
 ---@brief ]]
@@ -48,6 +49,9 @@
 ---of type |comment.utils.CommentCtx|
 ---(default: 'nil')
 ---@field post_hook nil | fun(c: CommentCtx)
+---Use hash comments if filetype is unrecognised
+---(default: 'true')
+---@field optimistic_comments boolean
 
 ---Create default mappings
 ---@class Mappings
@@ -103,6 +107,7 @@ local Config = {
         },
 		pre_hook = nil,
 		post_hook = nil,
+		optimistic_comments = true,
     },
 }
 
