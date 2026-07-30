@@ -9,10 +9,10 @@
 ---      padding = true,
 ---      sticky = true,
 ---      ignore = nil,
----      toggler = { line = 'gcc', block = 'gbc' },
+---      toggler = { line = 'gcc', block = 'gbc', insert = '<C-/>' },
 ---      opleader = { line = 'gc', block = 'gb' },
 ---      extra = { above = 'gcO', below = 'gco', eol = 'gcA' },
----      mappings = { basic = true, extra = true },
+---      mappings = { basic = true, extra = true, insert = true },
 ---      pre_hook = nil,
 ---      post_hook = nil,
 ---      optimistic_comments = true,
@@ -65,11 +65,15 @@
 ---Enable extra mapping; `gco`, `gcO` and `gcA`
 ---(default: 'true')
 ---@field extra boolean
+---Enable insert mode mapping; '<C-/>'
+---(default: 'true')
+---@field insert boolean
 
 ---LHS of toggle mappings in NORMAL
 ---@class Toggler
 ---@field line string Linewise comment (default: 'gcc')
 ---@field block string Blockwise comment (default: 'gbc')
+---@field insert string Linewise comment for insert mode (default: '<C-/>')
 
 ---LHS of operator-mode mappings in NORMAL and VISUAL mode
 ---@class Opleader
@@ -95,10 +99,12 @@ local Config = {
         mappings = {
             basic = true,
             extra = true,
+			insert = true,
         },
         toggler = {
             line = 'gcc',
             block = 'gbc',
+			insert = '<C-/>',
         },
         opleader = {
             line = 'gc',

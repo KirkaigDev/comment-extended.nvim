@@ -87,52 +87,81 @@ local C = {}
 ---})
 ---@usage ]]
 function C.setup(config)
-    local cfg = require('Comment.config'):set(config):get()
+	local cfg = require('Comment.config'):set(config):get()
 
-    if cfg.mappings then
-        local api = require('Comment.api')
-        local vvar = vim.api.nvim_get_vvar
-        local K = vim.keymap.set
+	if cfg.mappings then
+		local api = require('Comment.api')
+		local vvar = vim.api.nvim_get_vvar
+		local K = vim.keymap.set
 
-        -- Basic Mappings
-        if cfg.mappings.basic then
-            -- NORMAL mode mappings
-            K('n', cfg.opleader.line, '<Plug>(comment_toggle_linewise)', { desc = 'Comment toggle linewise' })
-            K('n', cfg.opleader.block, '<Plug>(comment_toggle_blockwise)', { desc = 'Comment toggle blockwise' })
+		-- Basic Mappings
+		if cfg.mappings.basic then
+			-- NORMAL mode mappings
+			K('n', cfg.opleader.line, '<Plug>(comment_toggle_linewise)', { desc = 'Comment toggle linewise' })
+			K('n', cfg.opleader.block, '<Plug>(comment_toggle_blockwise)', { desc = 'Comment toggle blockwise' })
 
-            K('n', cfg.toggler.line, function()
-                return vvar('count') == 0 and '<Plug>(comment_toggle_linewise_current)'
-                    or '<Plug>(comment_toggle_linewise_count)'
-            end, { expr = true, desc = 'Comment toggle current line' })
-            K('n', cfg.toggler.block, function()
-                return vvar('count') == 0 and '<Plug>(comment_toggle_blockwise_current)'
-                    or '<Plug>(comment_toggle_blockwise_count)'
-            end, { expr = true, desc = 'Comment toggle current block' })
+			K('n', cfg.toggler.line, function()
+				return vvar('count') == 0 and '<Plug>(comment_toggle_linewise_current)'
+				or '<Plug>(comment_toggle_linewise_count)'
+			end, { expr = true, desc = 'Comment toggle current line' })
+			K('n', cfg.toggler.block, function()
+				return vvar('count') == 0 and '<Plug>(comment_toggle_blockwise_current)'
+				or '<Plug>(comment_toggle_blockwise_count)'
+			end, { expr = true, desc = 'Comment toggle current block' })
 
-            -- VISUAL mode mappings
-            K(
-                'x',
-                cfg.opleader.line,
-                '<Plug>(comment_toggle_linewise_visual)',
-                { desc = 'Comment toggle linewise (visual)' }
-            )
-            K(
-                'x',
-                cfg.opleader.block,
-                '<Plug>(comment_toggle_blockwise_visual)',
-                { desc = 'Comment toggle blockwise (visual)' }
-            )
-        end
+			-- VISUAL mode mappings
+			K(
+				'x',
+				cfg.opleader.line,
+				'<Plug>(comment_toggle_linewise_visual)',
+				{ desc = 'Comment toggle linewise (visual)' }
+			)
+			K(
+				'x',
+				cfg.opleader.block,
+				'<Plug>(comment_toggle_blockwise_visual)',
+				{ desc = 'Comment toggle blockwise (visual)' }
+			)
+		end
 
-        -- Extra Mappings
-        if cfg.mappings.extra then
-            K('n', cfg.extra.below, api.insert.linewise.below, { desc = 'Comment insert below' })
-            K('n', cfg.extra.above, api.insert.linewise.above, { desc = 'Comment insert above' })
-            K('n', cfg.extra.eol, api.locked('insert.linewise.eol'), { desc = 'Comment insert end of line' })
-        end
-    end
+		-- Extra Mappings
+		if cfg.mappings.extra then
+			K('n', cfg.extra.below, api.insert.linewise.below, { desc = 'Comment insert below' })
+			K('n', cfg.extra.above, api.insert.linewise.above, { desc = 'Comment insert above' })
+			K('n', cfg.extra.eol, api.locked('insert.linewise.eol'), { desc = 'Comment insert end of line' })
+		end
 
-    return cfg
+		-- Insert Mode Toggler Mapping
+		if cfg.mappings.insert then
+			local ft_api = require("Comment.ft")
+			K('i', cfg.toggler.insert, function()
+				vim.cmd("stopinsert")
+				local column = vim.fn.virtcol(".")
+				local char_count_before = vim.fn.virtcol("$") - 1
+
+				vim.cmd("normal! " .. api.call("toggle.linewise.current", "g@$")())
+
+				local char_count_after = vim.fn.virtcol("$") - 1
+
+				local updated_column = 0
+				if (ft_api.get(vim.bo.filetype)[1] == ft_api.get(vim.bo.filetype)[2]) then
+					updated_column = ((char_count_after - char_count_before) / 2) + column
+				else
+					updated_column = (char_count_after - char_count_before) + column
+				end
+
+				local insert_key = "a"
+				if (updated_column == 1) then
+					insert_key = "i"
+				else
+					updated_column = updated_column - 1
+				end
+				vim.api.nvim_feedkeys(tostring(updated_column) .. "|" .. insert_key, "n", false)
+			end, { desc = "toggle single line comments" })
+		end
+	end
+
+	return cfg
 end
 
 return C
