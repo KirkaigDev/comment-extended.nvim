@@ -16,6 +16,7 @@
 ---      pre_hook = nil,
 ---      post_hook = nil,
 ---      optimistic_comments = true,
+---      optimistic_comments_syntax = '#%s',
 ---  }
 ---<
 ---@brief ]]
@@ -49,9 +50,12 @@
 ---of type |comment.utils.CommentCtx|
 ---(default: 'nil')
 ---@field post_hook nil | fun(c: CommentCtx)
----Use hash comments if filetype is unrecognised
+---Use backup comment syntax if comment syntax couldn't be found
 ---(default: 'true')
 ---@field optimistic_comments boolean
+---The comment syntax to use for optimistic comments, hash by default
+---(default: '#%s')
+---@field optimistic_comments_syntax string
 
 ---Create default mappings
 ---@class Mappings
@@ -108,6 +112,7 @@ local Config = {
 		pre_hook = nil,
 		post_hook = nil,
 		optimistic_comments = true,
+		optimistic_comments_syntax = '#%s',
     },
 }
 

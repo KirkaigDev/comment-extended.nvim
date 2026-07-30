@@ -299,7 +299,7 @@ function ft.calculate(ctx)
 	if not parser then
 		return ft.get(vim.bo.filetype, ctx.ctype) --[[ @as string ]]
 	elseif Config:get().optimistic_comments then
-		return M.hash --[[ @as string ]]
+		return Config:get().optimistic_comments_syntax --[[ @as string ]]
 	end
 
 	local lang = ft.contains(parser, {
