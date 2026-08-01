@@ -59,7 +59,7 @@
 ---@brief [[
 ---Before using the plugin, you need to call the `setup()` function to create the
 ---default mappings. If you want, you can also override the default configuration
----by giving it a partial 'comment.config.Config' object, it will then be merged
+---by giving it a partial 'comment.config.config' object, it will then be merged
 ---with the default configuration.
 ---@brief ]]
 

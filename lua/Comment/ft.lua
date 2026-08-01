@@ -10,8 +10,7 @@
 ---be used if found otherwise it'll fallback to 'yaml'. Read `:h 'filetype'`
 ---@brief ]]
 
-local A = vim.api
-local Config = require("Comment.config")
+local config = require("Comment.config")
 
 ---Common commentstring shared b/w multiple languages
 local M = {
@@ -294,13 +293,13 @@ end
 ---@return nil|string #Commentstring
 ---@see comment.utils.CommentCtx
 function ft.calculate(ctx)
-	local _, parser = pcall(vim.treesitter.get_parser, A.nvim_get_current_buf())
+	local _, parser = pcall(vim.treesitter.get_parser, vim.api.nvim_get_current_buf())
 
 	if not parser then
 		local filetype_comment = ft.get(vim.bo.filetype, ctx.ctype) --[[ @as string ]]
 
-		if not filetype_comment and Config:get().optimistic_comments then
-			return Config:get().optimistic_comments_syntax --[[ @as string ]]
+		if not filetype_comment and config:get().optimistic_comments then
+			return config:get().optimistic_comments_syntax --[[ @as string ]]
 		else
 			return filetype_comment
 		end
