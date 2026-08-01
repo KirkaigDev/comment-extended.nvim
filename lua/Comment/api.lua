@@ -243,7 +243,7 @@ end
 ---@usage ]]
 function api.call(cb, op)
 	return function()
-		vim.api.nvim_set_option("operatorfunc", ("v:lua.require'Comment.api'.locked'%s'"):format(cb))
+		vim.o.operatorfunc = ("v:lua.require'Comment.api'.locked'%s'"):format(cb)
 		config.position = config:get().sticky and vim.api.nvim_win_get_cursor(0) or nil
 		return op
 	end
