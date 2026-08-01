@@ -11,29 +11,29 @@
 ---@brief ]]
 
 local A = vim.api
-local Config = require('Comment.config')
+local Config = require("Comment.config")
 
 ---Common commentstring shared b/w multiple languages
 local M = {
-	cxx_l = '//%s',
-	cxx_b = '/*%s*/',
-	dbl_hash = '##%s',
-	dash = '--%s',
-	dash_bracket = '--[[%s]]',
-	handlebars = '{{!--%s--}}',
-	hash = '#%s',
-	hash_bracket = '#[[%s]]',
-	haskell_b = '{-%s-}',
-	fsharp_b = '(*%s*)',
-	html = '<!--%s-->',
-	latex = '%%s',
-	semicolon = ';%s',
-	lisp_l = ';;%s',
-	lisp_b = '#|%s|#',
-	twig = '{#%s#}',
+	cxx_l = "//%s",
+	cxx_b = "/*%s*/",
+	dbl_hash = "##%s",
+	dash = "--%s",
+	dash_bracket = "--[[%s]]",
+	handlebars = "{{!--%s--}}",
+	hash = "#%s",
+	hash_bracket = "#[[%s]]",
+	haskell_b = "{-%s-}",
+	fsharp_b = "(*%s*)",
+	html = "<!--%s-->",
+	latex = "%%s",
+	semicolon = ";%s",
+	lisp_l = ";;%s",
+	lisp_b = "#|%s|#",
+	twig = "{#%s#}",
 	vim = '"%s',
-	lean_b = '/-%s-/',
-	ruby_block = '=begin%s=end',
+	lean_b = "/-%s-/",
+	ruby_block = "=begin%s=end",
 }
 
 ---Lang table that contains commentstring (linewise/blockwise) for multiple filetypes
@@ -64,7 +64,7 @@ local L = setmetatable({
 	dart = { M.cxx_l, M.cxx_b },
 	dhall = { M.dash, M.haskell_b },
 	dnsmasq = { M.hash },
-	dosbatch = { 'REM%s' },
+	dosbatch = { "REM%s" },
 	dot = { M.cxx_l, M.cxx_b },
 	dts = { M.cxx_l, M.cxx_b },
 	editorconfig = { M.hash },
@@ -106,25 +106,25 @@ local L = setmetatable({
 	jq = { M.hash },
 	jsonc = { M.cxx_l },
 	jsonnet = { M.cxx_l, M.cxx_b },
-	julia = { M.hash, '#=%s=#' },
+	julia = { M.hash, "#=%s=#" },
 	kdl = { M.cxx_l, M.cxx_b },
 	kotlin = { M.cxx_l, M.cxx_b },
 	lean = { M.dash, M.lean_b },
 	lean3 = { M.dash, M.lean_b },
 	lidris = { M.dash, M.haskell_b },
-	lilypond = { M.latex, '%{%s%}' },
+	lilypond = { M.latex, "%{%s%}" },
 	lisp = { M.lisp_l, M.lisp_b },
 	lua = { M.dash, M.dash_bracket },
 	luau = { M.dash, M.dash_bracket },
 	make = { M.hash },
 	markdown = { M.html, M.html },
 	mbsyncrc = { M.dbl_hash },
-	mermaid = { '%%%s' },
+	mermaid = { "%%%s" },
 	meson = { M.hash },
 	metalua = { M.dash, M.dash_bracket },
 	mojo = { M.hash },
 	nextflow = { M.cxx_l, M.cxx_b },
-	nim = { M.hash, '#[%s]#' },
+	nim = { M.hash, "#[%s]#" },
 	nix = { M.hash, M.cxx_b },
 	nu = { M.hash },
 	objc = { M.cxx_l, M.cxx_b },
@@ -187,7 +187,7 @@ local L = setmetatable({
 	vim = { M.vim },
 	vue = { M.html, M.html },
 	wgsl = { M.cxx_l, M.cxx_b },
-	xdefaults = { '!%s' },
+	xdefaults = { "!%s" },
 	xml = { M.html, M.html },
 	xonsh = { M.hash }, -- Xonsh doesn't have block comments
 	yaml = { M.hash },
@@ -196,7 +196,7 @@ local L = setmetatable({
 }, {
 	-- Support for compound filetype i.e. 'ios.swift', 'ansible.yaml' etc.
 	__index = function(this, k)
-		local base, fallback = string.match(k, '^(.-)%.(.*)')
+		local base, fallback = string.match(k, "^(.-)%.(.*)")
 		if not (base or fallback) then
 			return nil
 		end
@@ -227,7 +227,7 @@ local ft = {}
 ---ft({'toml', 'graphql'}, '#%s')
 ---@usage ]]
 function ft.set(lang, val)
-	L[lang] = type(val) == 'string' and { val } or val --[[ @as string[] ]]
+	L[lang] = type(val) == "string" and { val } or val --[[ @as string[] ]]
 	return ft
 end
 
@@ -281,7 +281,7 @@ end
 ---@usage ]]
 function ft.contains(tree, range)
 	for lang, child in pairs(tree:children()) do
-		if lang ~= 'comment' and child:contains(range) then
+		if lang ~= "comment" and child:contains(range) then
 			return ft.contains(child, range)
 		end
 	end

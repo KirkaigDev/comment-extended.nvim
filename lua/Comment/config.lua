@@ -91,35 +91,35 @@
 ---@field config CommentConfig
 ---@field position? integer[] To be used to restore cursor position
 local Config = {
-    state = {},
-    config = {
-        padding = true,
-        sticky = true,
+	state = {},
+	config = {
+		padding = true,
+		sticky = true,
 		ignore = nil,
-        mappings = {
-            basic = true,
-            extra = true,
+		mappings = {
+			basic = true,
+			extra = true,
 			insert = true,
-        },
-        toggler = {
-            line = 'gcc',
-            block = 'gbc',
-			insert = '<C-/>',
-        },
-        opleader = {
-            line = 'gc',
-            block = 'gb',
-        },
-        extra = {
-            above = 'gcO',
-            below = 'gco',
-            eol = 'gcA',
-        },
+		},
+		toggler = {
+			line = "gcc",
+			block = "gbc",
+			insert = "<C-/>",
+		},
+		opleader = {
+			line = "gc",
+			block = "gb",
+		},
+		extra = {
+			above = "gcO",
+			below = "gco",
+			eol = "gcA",
+		},
 		pre_hook = nil,
 		post_hook = nil,
 		optimistic_comments = true,
-		optimistic_comments_syntax = '#%s',
-    },
+		optimistic_comments_syntax = "#%s",
+	},
 }
 
 ---@package
@@ -129,25 +129,25 @@ local Config = {
 ---@see comment.usage.setup
 ---@usage `require('Comment.config'):set({config})`
 function Config:set(cfg)
-    if cfg then
-        self.config = vim.tbl_deep_extend('force', self.config, cfg)
-    end
-    return self
+	if cfg then
+		self.config = vim.tbl_deep_extend("force", self.config, cfg)
+	end
+	return self
 end
 
 ---Get the config
 ---@return CommentConfig
 ---@usage `require('Comment.config'):get()`
 function Config:get()
-    return self.config
+	return self.config
 end
 
 ---@export Config
 return setmetatable(Config, {
-    __index = function(this, k)
-        return this.state[k]
-    end,
-    __newindex = function(this, k, v)
-        this.state[k] = v
-    end,
+	__index = function(this, k)
+		return this.state[k]
+	end,
+	__newindex = function(this, k, v)
+		this.state[k] = v
+	end,
 })
