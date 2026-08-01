@@ -5,7 +5,7 @@
 ---own custom keybindings or to even make your (un)comment function.
 ---@brief ]]
 
-local config = require("Comment.config")
+local config_import = require("Comment.config")
 local utils = require("Comment.utils")
 local opfunc = require("Comment.opfunc")
 local extra = require("Comment.extra")
@@ -13,37 +13,37 @@ local extra = require("Comment.extra")
 local api, core = {}, {}
 
 ---API metamethods
----@param that table
----@param ctype CommentType
+---@param instance table
+---@param comment_type CommentType
 ---@return table
-function core.__index(that, ctype)
-	local idxd = {}
-	local mode, type = that.cmode, utils.ctype[ctype]
+function core.__index(instance, comment_type)
+	local line_count_methods = {}
+	local mode, type = instance.cmode, utils.ctype[comment_type]
 
 	---To comment the current-line
 	---NOTE:
 	---In current-line linewise method, 'opmode' is not useful which is always equals to `char`
 	---but we need 'nil' here which is used for current-line
-	function idxd.current(_, cfg)
-		utils.catch(opfunc.opfunc, nil, cfg or config:get(), mode, type)
+	function line_count_methods.current(_, user_config)
+		utils.catch(opfunc.opfunc, nil, user_config or config_import:get(), mode, type)
 	end
 
 	---To comment lines with a count
-	function idxd.count(count, cfg)
-		utils.catch(opfunc.count, count or vim.api.nvim_get_vvar("count"), cfg or config:get(), mode, type)
+	function line_count_methods.count(count, user_config)
+		utils.catch(opfunc.count, count or vim.api.nvim_get_vvar("count"), user_config or config_import:get(), mode, type)
 	end
 
 	---@private
 	---To comment lines with a count, also dot-repeatable
 	---WARN: This is not part of the API but anyone case use it, if they want
-	function idxd.count_repeat(_, count, cfg)
-		idxd.count(count, cfg)
+	function line_count_methods.count_repeat(_, count, user_config)
+		line_count_methods.count(count, user_config)
 	end
 
 	return setmetatable({}, {
-		__index = idxd,
-		__call = function(_, motion, cfg)
-			utils.catch(opfunc.opfunc, motion, cfg or config:get(), mode, type)
+		__index = line_count_methods,
+		__call = function(_, motion, user_config)
+			utils.catch(opfunc.opfunc, motion, user_config or config_import:get(), mode, type)
 		end,
 	})
 end
@@ -173,23 +173,23 @@ api.uncomment = setmetatable({ cmode = utils.cmode.uncomment }, core)
 ---api.insert.blockwise.eol(config?)
 ---@usage ]]
 api.insert = setmetatable({}, {
-	__index = function(_, ctype)
+	__index = function(_, comment_type)
 		return {
-			above = function(cfg)
-				utils.catch(extra.insert_above, utils.ctype[ctype], cfg or config:get())
+			above = function(user_config)
+				utils.catch(extra.insert_above, utils.ctype[comment_type], user_config or config_import:get())
 			end,
-			below = function(cfg)
-				utils.catch(extra.insert_below, utils.ctype[ctype], cfg or config:get())
+			below = function(user_config)
+				utils.catch(extra.insert_below, utils.ctype[comment_type], user_config or config_import:get())
 			end,
-			eol = function(cfg)
-				utils.catch(extra.insert_eol, utils.ctype[ctype], cfg or config:get())
+			eol = function(user_config)
+				utils.catch(extra.insert_eol, utils.ctype[comment_type], user_config or config_import:get())
 			end,
 		}
 	end,
 })
 
 ---Wraps the given API function with 'lockmarks' to preserve marks/jumps
----@param cb string Name of API function
+---@param fn_name string Name of API function
 ---@return fun(motion:OpMotion) #Callback function
 ---@see lockmarks
 ---@see comment.opfunc.OpMotion
@@ -213,10 +213,10 @@ api.insert = setmetatable({}, {
 ---    lockmarks lua require('Comment.api').toggle.linewise.current()
 ---]])
 ---@usage ]]
-function api.locked(cb)
+function api.locked(fn_name)
 	return function(motion)
 		return vim.api.nvim_command(
-			('lockmarks lua require("Comment.api").%s(%s)'):format(cb, motion and ("%q"):format(motion))
+			('lockmarks lua require("Comment.api").%s(%s)'):format(fn_name, motion and ("%q"):format(motion))
 		)
 	end
 end
@@ -225,8 +225,8 @@ end
 ---  1. Sets 'operatorfunc' for dot-repeat
 ---  2. Preserves jumps and marks
 ---  3. Stores last cursor position
----@param cb string Name of the API function to call
----@param op '"g@"'|'"g@$"' Operator-mode expression
+---@param fn_name string Name of the API function to call
+---@param op_mode '"g@"'|'"g@$"' Operator-mode expression
 ---@return fun():string #Keymap RHS callback
 ---@see g@
 ---@see operatorfunc
@@ -241,11 +241,11 @@ end
 ---    { expr = true }
 ---)
 ---@usage ]]
-function api.call(cb, op)
+function api.call(fn_name, op_mode)
 	return function()
-		vim.o.operatorfunc = ("v:lua.require'Comment.api'.locked'%s'"):format(cb)
-		config.position = config:get().sticky and vim.api.nvim_win_get_cursor(0) or nil
-		return op
+		vim.o.operatorfunc = ("v:lua.require'Comment.api'.locked'%s'"):format(fn_name)
+		config_import.position = config_import:get().sticky and vim.api.nvim_win_get_cursor(0) or nil
+		return op_mode
 	end
 end
 
