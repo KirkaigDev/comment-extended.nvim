@@ -146,23 +146,24 @@ function meta.linewise(op_params)
 	local min_indent, tabbed = -1, false
 
 	-- If the given cmode is uncomment then we actually don't want to compute the cmode or min_indent
-	if op_params.cmode ~= utils.cmode.uncomment then
-		for _, line in ipairs(op_params.lines) do
-			-- I wish lua had `continue` statement [sad noises]
-			if not utils.ignore(line, pattern) then
-				if cmode == utils.cmode.uncomment and op_params.cmode == utils.cmode.toggle and (not check_comment(line)) then
-					cmode = utils.cmode.comment
-				end
+	if (op_params.cmode == utils.cmode.uncomment) then goto compute_loop_end end
+	for _, line in ipairs(op_params.lines) do
+		-- I wish lua had `continue` statement [sad noises]
+		-- `--> no problem, I found a workaround from a 2012 stack overflow post (KirkaigDev 2026-08-06)
+		if utils.ignore(line, pattern) then goto continue end
+		if cmode == utils.cmode.uncomment and op_params.cmode == utils.cmode.toggle and (not check_comment(line)) then
+			cmode = utils.cmode.comment
+		end
 
-				if not utils.is_empty(line) and op_params.cmode ~= utils.cmode.uncomment then
-					local _, len = string.find(line, "^%s*")
-					if len and (min_indent == -1 or min_indent > len) then
-						min_indent, tabbed = len, string.find(line, "^\t") ~= nil
-					end
-				end
+		if not utils.is_empty(line) and op_params.cmode ~= utils.cmode.uncomment then
+			local _, len = string.find(line, "^%s*")
+			if len and (min_indent == -1 or min_indent > len) then
+				min_indent, tabbed = len, string.find(line, "^\t") ~= nil
 			end
 		end
+		::continue::
 	end
+	::compute_loop_end::
 
 	-- If the comment mode given is not toggle than force that mode
 	if op_params.cmode ~= utils.cmode.toggle then
