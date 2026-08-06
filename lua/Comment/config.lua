@@ -122,7 +122,6 @@ local meta = {
 	},
 }
 
----@package
 ---Updates the default config
 ---@param config? CommentConfig
 ---@return RootConfig

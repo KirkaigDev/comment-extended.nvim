@@ -156,7 +156,7 @@ function meta.linewise(op_params)
 
 				if not utils.is_empty(line) and op_params.cmode ~= utils.cmode.uncomment then
 					local _, len = string.find(line, "^%s*")
-					if min_indent == -1 or min_indent > len then
+					if len and (min_indent == -1 or min_indent > len) then
 						min_indent, tabbed = len, string.find(line, "^\t") ~= nil
 					end
 				end
@@ -218,7 +218,7 @@ function meta.blockwise(op_params, partial)
 		lines = utils.commenter(op_params.lcs, op_params.rcs, padding, start_column, end_column)(lines)
 	end
 
-	if is_x then
+	if (type(lines) == "string") then
 		vim.api.nvim_set_current_line(lines)
 	else
 		vim.api.nvim_buf_set_lines(0, op_params.range.srow - 1, op_params.range.erow, false, lines)
