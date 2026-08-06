@@ -90,7 +90,7 @@
 ---@class RootConfig
 ---@field config CommentConfig
 ---@field position? integer[] To be used to restore cursor position
-local Config = {
+local meta = {
 	state = {},
 	config = {
 		padding = true,
@@ -124,13 +124,13 @@ local Config = {
 
 ---@package
 ---Updates the default config
----@param cfg? CommentConfig
+---@param config? CommentConfig
 ---@return RootConfig
 ---@see comment.usage.setup
 ---@usage `require('Comment.config'):set({config})`
-function Config:set(cfg)
-	if cfg then
-		self.config = vim.tbl_deep_extend("force", self.config, cfg)
+function meta:set(config)
+	if config then
+		self.config = vim.tbl_deep_extend("force", self.config, config)
 	end
 	return self
 end
@@ -138,16 +138,16 @@ end
 ---Get the config
 ---@return CommentConfig
 ---@usage `require('Comment.config'):get()`
-function Config:get()
+function meta:get()
 	return self.config
 end
 
 ---@export Config
-return setmetatable(Config, {
-	__index = function(this, k)
-		return this.state[k]
+return setmetatable(meta, {
+	__index = function(this, key)
+		return this.state[key]
 	end,
-	__newindex = function(this, k, v)
-		this.state[k] = v
+	__newindex = function(this, key, value)
+		this.state[key] = value
 	end,
 })

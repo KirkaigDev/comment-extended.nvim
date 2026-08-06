@@ -69,7 +69,7 @@
 ---with the default configuration.
 ---@brief ]]
 
-local C = {}
+local meta = {}
 
 ---Configures the plugin
 ---@param config? CommentConfig User configuration
@@ -92,55 +92,55 @@ local C = {}
 ---    },
 ---})
 ---@usage ]]
-function C.setup(config)
-	local cfg = require("Comment.config"):set(config):get()
+function meta.setup(config)
+	local config_import = require("Comment.config"):set(config):get()
 
-	if cfg.mappings then
+	if config_import.mappings then
 		local api = require("Comment.api")
 		local vvar = vim.api.nvim_get_vvar
-		local K = vim.keymap.set
+		local keybind = vim.keymap.set
 
 		-- Basic Mappings
-		if cfg.mappings.basic then
+		if config_import.mappings.basic then
 			-- NORMAL mode mappings
-			K("n", cfg.opleader.line, "<Plug>(comment_toggle_linewise)", { desc = "Comment toggle linewise" })
-			K("n", cfg.opleader.block, "<Plug>(comment_toggle_blockwise)", { desc = "Comment toggle blockwise" })
+			keybind("n", config_import.opleader.line, "<Plug>(comment_toggle_linewise)", { desc = "Comment toggle linewise" })
+			keybind("n", config_import.opleader.block, "<Plug>(comment_toggle_blockwise)", { desc = "Comment toggle blockwise" })
 
-			K("n", cfg.toggler.line, function()
+			keybind("n", config_import.toggler.line, function()
 				return vvar("count") == 0 and "<Plug>(comment_toggle_linewise_current)"
 					or "<Plug>(comment_toggle_linewise_count)"
 			end, { expr = true, desc = "Comment toggle current line" })
-			K("n", cfg.toggler.block, function()
+			keybind("n", config_import.toggler.block, function()
 				return vvar("count") == 0 and "<Plug>(comment_toggle_blockwise_current)"
 					or "<Plug>(comment_toggle_blockwise_count)"
 			end, { expr = true, desc = "Comment toggle current block" })
 
 			-- VISUAL mode mappings
-			K(
+			keybind(
 				"x",
-				cfg.opleader.line,
+				config_import.opleader.line,
 				"<Plug>(comment_toggle_linewise_visual)",
 				{ desc = "Comment toggle linewise (visual)" }
 			)
-			K(
+			keybind(
 				"x",
-				cfg.opleader.block,
+				config_import.opleader.block,
 				"<Plug>(comment_toggle_blockwise_visual)",
 				{ desc = "Comment toggle blockwise (visual)" }
 			)
 		end
 
 		-- Extra Mappings
-		if cfg.mappings.extra then
-			K("n", cfg.extra.below, api.insert.linewise.below, { desc = "Comment insert below" })
-			K("n", cfg.extra.above, api.insert.linewise.above, { desc = "Comment insert above" })
-			K("n", cfg.extra.eol, api.locked("insert.linewise.eol"), { desc = "Comment insert end of line" })
+		if config_import.mappings.extra then
+			keybind("n", config_import.extra.below, api.insert.linewise.below, { desc = "Comment insert below" })
+			keybind("n", config_import.extra.above, api.insert.linewise.above, { desc = "Comment insert above" })
+			keybind("n", config_import.extra.eol, api.locked("insert.linewise.eol"), { desc = "Comment insert end of line" })
 		end
 
 		-- Insert Mode Toggler Mapping
-		if cfg.mappings.insert then
+		if config_import.mappings.insert then
 			local ft_api = require("Comment.ft")
-			K("i", cfg.toggler.insert, function()
+			keybind("i", config_import.toggler.insert, function()
 				vim.cmd("stopinsert")
 				local column = vim.fn.virtcol(".")
 				local char_count_before = vim.fn.virtcol("$") - 1
@@ -167,7 +167,7 @@ function C.setup(config)
 		end
 	end
 
-	return cfg
+	return config_import
 end
 
-return C
+return meta

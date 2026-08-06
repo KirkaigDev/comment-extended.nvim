@@ -7,7 +7,7 @@
 local utils = require("Comment.utils")
 local config = require("Comment.config")
 
-local Op = {}
+local meta = {}
 
 ---Vim operator-mode motion enum. Read |:map-operator|
 ---@alias OpMotion
@@ -18,19 +18,22 @@ local Op = {}
 
 ---Common operatorfunc callback
 ---This function contains the core logic for comment/uncomment
----@param motion? OpMotion
+---@param input_motion? OpMotion
 ---If given 'nil', it'll only (un)comment
 ---the current line
----@param cfg CommentConfig
----@param cmode integer See |comment.utils.cmode|
----@param ctype integer See |comment.utils.ctype|
-function Op.opfunc(motion, cfg, cmode, ctype)
-	local range = utils.get_region(motion)
-	local cmotion = motion == nil and utils.cmotion.line or utils.cmotion[motion]
+---@param user_config CommentConfig
+---@param mode integer See |comment.utils.cmode|
+---@param type integer See |comment.utils.ctype|
+function meta.opfunc(input_motion, user_config, mode, type)
+	local range = utils.get_region(input_motion)
+	-- NOTE:
+	-- This shouldn't have been implemented this way
+	-- something that should be fixed (KirkaigDev - 2026-08-06)
+	local motion = input_motion == nil and utils.cmotion.line or utils.cmotion[input_motion]
 
 	-- If we are doing char or visual motion on the same line
 	-- then we would probably want block comment instead of line comment
-	local is_partial = cmotion == utils.cmotion.char or cmotion == utils.cmotion.v
+	local is_partial = motion == utils.cmotion.char or motion == utils.cmotion.v
 	local is_blockx = is_partial and range.srow == range.erow
 
 	local lines = utils.get_lines(range)
@@ -42,29 +45,29 @@ function Op.opfunc(motion, cfg, cmode, ctype)
 	end
 
 	---@type CommentCtx
-	local ctx = {
-		cmode = cmode,
-		cmotion = cmotion,
-		ctype = is_blockx and utils.ctype.blockwise or ctype,
+	local com_params = {
+		cmode = mode,
+		cmotion = motion,
+		ctype = is_blockx and utils.ctype.blockwise or type,
 		range = range,
 	}
 
-	local lcs, rcs = utils.parse_cstr(cfg, ctx)
+	local com_marker_prefix, com_marker_suffix = utils.parse_cstr(user_config, com_params)
 
 	---@type OpFnParams
-	local params = {
-		cfg = cfg,
+	local op_params = {
+		cfg = user_config,
 		lines = lines,
-		lcs = lcs,
-		rcs = rcs,
-		cmode = cmode,
+		lcs = com_marker_prefix,
+		rcs = com_marker_suffix,
+		cmode = mode,
 		range = range,
 	}
 
-	if motion ~= nil and (is_blockx or ctype == utils.ctype.blockwise) then
-		ctx.cmode = Op.blockwise(params, is_partial)
+	if input_motion ~= nil and (is_blockx or type == utils.ctype.blockwise) then
+		com_params.cmode = meta.blockwise(op_params, is_partial)
 	else
-		ctx.cmode = Op.linewise(params)
+		com_params.cmode = meta.linewise(op_params)
 	end
 
 	-- We only need to restore cursor if both sticky and position are available
@@ -72,48 +75,48 @@ function Op.opfunc(motion, cfg, cmode, ctype)
 	--
 	-- And I found out that if someone presses `gc` but doesn't provide operators and
 	-- does visual comments then cursor jumps to previous stored position. Thus the check for visual modes
-	if cfg.sticky and config.position and cmotion ~= utils.cmotion.v and cmotion ~= utils.cmotion.V then
+	if user_config.sticky and config.position and motion ~= utils.cmotion.v and motion ~= utils.cmotion.V then
 		vim.api.nvim_win_set_cursor(0, config.position)
 		config.position = nil
 	end
 
-	utils.is_fn(cfg.post_hook, ctx)
+	utils.is_fn(user_config.post_hook, com_params)
 end
 
 ---Line commenting with count
 ---@param count integer Value of |v:count|
----@param cfg CommentConfig
----@param cmode integer See |comment.utils.cmode|
----@param ctype integer See |comment.utils.ctype|
-function Op.count(count, cfg, cmode, ctype)
+---@param user_config CommentConfig
+---@param mode integer See |comment.utils.cmode|
+---@param type integer See |comment.utils.ctype|
+function meta.count(count, user_config, mode, type)
 	local lines, range = utils.get_count_lines(count)
 
 	---@type CommentCtx
-	local ctx = {
-		cmode = cmode,
+	local com_params = {
+		cmode = mode,
 		cmotion = utils.cmotion.line,
-		ctype = ctype,
+		ctype = type,
 		range = range,
 	}
-	local lcs, rcs = utils.parse_cstr(cfg, ctx)
+	local com_marker_prefix, com_marker_suffix = utils.parse_cstr(user_config, com_params)
 
 	---@type OpFnParams
-	local params = {
-		cfg = cfg,
-		cmode = ctx.cmode,
+	local op_params = {
+		cfg = user_config,
+		cmode = com_params.cmode,
 		lines = lines,
-		lcs = lcs,
-		rcs = rcs,
+		lcs = com_marker_prefix,
+		rcs = com_marker_suffix,
 		range = range,
 	}
 
-	if ctype == utils.ctype.blockwise then
-		ctx.cmode = Op.blockwise(params)
+	if type == utils.ctype.blockwise then
+		com_params.cmode = meta.blockwise(op_params)
 	else
-		ctx.cmode = Op.linewise(params)
+		com_params.cmode = meta.linewise(op_params)
 	end
 
-	utils.is_fn(cfg.post_hook, ctx)
+	utils.is_fn(user_config.post_hook, com_params)
 end
 
 ---Operator-mode function parameters
@@ -126,12 +129,12 @@ end
 ---@field range CommentRange
 
 ---Line commenting
----@param param OpFnParams
+---@param op_params OpFnParams
 ---@return integer _ Returns a calculated comment mode
-function Op.linewise(param)
-	local pattern = utils.is_fn(param.cfg.ignore)
-	local padding = utils.is_fn(param.cfg.padding)
-	local check_comment = utils.is_commented(param.lcs, param.rcs, padding)
+function meta.linewise(op_params)
+	local pattern = utils.is_fn(op_params.cfg.ignore)
+	local padding = utils.is_fn(op_params.cfg.padding)
+	local check_comment = utils.is_commented(op_params.lcs, op_params.rcs, padding)
 
 	-- While commenting a region, there could be lines being both commented and non-commented
 	-- So, if any line is uncommented then we should comment the whole block or vise-versa
@@ -143,15 +146,15 @@ function Op.linewise(param)
 	local min_indent, tabbed = -1, false
 
 	-- If the given cmode is uncomment then we actually don't want to compute the cmode or min_indent
-	if param.cmode ~= utils.cmode.uncomment then
-		for _, line in ipairs(param.lines) do
+	if op_params.cmode ~= utils.cmode.uncomment then
+		for _, line in ipairs(op_params.lines) do
 			-- I wish lua had `continue` statement [sad noises]
 			if not utils.ignore(line, pattern) then
-				if cmode == utils.cmode.uncomment and param.cmode == utils.cmode.toggle and (not check_comment(line)) then
+				if cmode == utils.cmode.uncomment and op_params.cmode == utils.cmode.toggle and (not check_comment(line)) then
 					cmode = utils.cmode.comment
 				end
 
-				if not utils.is_empty(line) and param.cmode ~= utils.cmode.uncomment then
+				if not utils.is_empty(line) and op_params.cmode ~= utils.cmode.uncomment then
 					local _, len = string.find(line, "^%s*")
 					if min_indent == -1 or min_indent > len then
 						min_indent, tabbed = len, string.find(line, "^\t") ~= nil
@@ -162,66 +165,66 @@ function Op.linewise(param)
 	end
 
 	-- If the comment mode given is not toggle than force that mode
-	if param.cmode ~= utils.cmode.toggle then
-		cmode = param.cmode
+	if op_params.cmode ~= utils.cmode.toggle then
+		cmode = op_params.cmode
 	end
 
 	if cmode == utils.cmode.uncomment then
-		local uncomment = utils.uncommenter(param.lcs, param.rcs, padding)
-		for i, line in ipairs(param.lines) do
+		local uncomment = utils.uncommenter(op_params.lcs, op_params.rcs, padding)
+		for i, line in ipairs(op_params.lines) do
 			if not utils.ignore(line, pattern) then
-				param.lines[i] = uncomment(line) --[[@as string]]
+				op_params.lines[i] = uncomment(line) --[[@as string]]
 			end
 		end
 	else
-		local comment = utils.commenter(param.lcs, param.rcs, padding, min_indent, nil, tabbed)
-		for i, line in ipairs(param.lines) do
+		local comment = utils.commenter(op_params.lcs, op_params.rcs, padding, min_indent, nil, tabbed)
+		for i, line in ipairs(op_params.lines) do
 			if not utils.ignore(line, pattern) then
-				param.lines[i] = comment(line) --[[@as string]]
+				op_params.lines[i] = comment(line) --[[@as string]]
 			end
 		end
 	end
 
-	vim.api.nvim_buf_set_lines(0, param.range.srow - 1, param.range.erow, false, param.lines)
+	vim.api.nvim_buf_set_lines(0, op_params.range.srow - 1, op_params.range.erow, false, op_params.lines)
 
 	return cmode
 end
 
 ---Full/Partial/Current-Line Block commenting
----@param param OpFnParams
+---@param op_params OpFnParams
 ---@param partial? boolean Comment the partial region (visual mode)
 ---@return integer _ Returns a calculated comment mode
-function Op.blockwise(param, partial)
-	local is_x = #param.lines == 1 -- current-line blockwise
-	local lines = is_x and param.lines[1] or param.lines
+function meta.blockwise(op_params, partial)
+	local is_x = #op_params.lines == 1 -- current-line blockwise
+	local lines = is_x and op_params.lines[1] or op_params.lines
 
-	local padding = utils.is_fn(param.cfg.padding)
+	local padding = utils.is_fn(op_params.cfg.padding)
 
-	local scol, ecol = nil, nil
+	local start_column, end_column = nil, nil
 	if is_x or partial then
-		scol, ecol = param.range.scol, param.range.ecol
+		start_column, end_column = op_params.range.scol, op_params.range.ecol
 	end
 
 	-- If given mode is toggle then determine whether to comment or not
-	local cmode = param.cmode
-	if cmode == utils.cmode.toggle then
-		local is_cmt = utils.is_commented(param.lcs, param.rcs, padding, scol, ecol)(lines)
-		cmode = is_cmt and utils.cmode.uncomment or utils.cmode.comment
+	local mode = op_params.cmode
+	if mode == utils.cmode.toggle then
+		local is_cmt = utils.is_commented(op_params.lcs, op_params.rcs, padding, start_column, end_column)(lines)
+		mode = is_cmt and utils.cmode.uncomment or utils.cmode.comment
 	end
 
-	if cmode == utils.cmode.uncomment then
-		lines = utils.uncommenter(param.lcs, param.rcs, padding, scol, ecol)(lines)
+	if mode == utils.cmode.uncomment then
+		lines = utils.uncommenter(op_params.lcs, op_params.rcs, padding, start_column, end_column)(lines)
 	else
-		lines = utils.commenter(param.lcs, param.rcs, padding, scol, ecol)(lines)
+		lines = utils.commenter(op_params.lcs, op_params.rcs, padding, start_column, end_column)(lines)
 	end
 
 	if is_x then
 		vim.api.nvim_set_current_line(lines)
 	else
-		vim.api.nvim_buf_set_lines(0, param.range.srow - 1, param.range.erow, false, lines)
+		vim.api.nvim_buf_set_lines(0, op_params.range.srow - 1, op_params.range.erow, false, lines)
 	end
 
-	return cmode
+	return mode
 end
 
-return Op
+return meta

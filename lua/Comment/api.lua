@@ -10,7 +10,7 @@ local utils = require("Comment.utils")
 local opfunc = require("Comment.opfunc")
 local extra = require("Comment.extra")
 
-local api, core = {}, {}
+local meta, core = {}, {}
 
 ---API metamethods
 ---@param instance table
@@ -106,7 +106,7 @@ end
 ---    api.toggle.blockwise(vim.fn.visualmode())
 ---end)
 ---@usage ]]
-api.toggle = setmetatable({ cmode = utils.cmode.toggle }, core)
+meta.toggle = setmetatable({ cmode = utils.cmode.toggle }, core)
 
 ---@tag comment.api.comment.linewise
 ---@tag comment.api.comment.blockwise
@@ -130,7 +130,7 @@ api.toggle = setmetatable({ cmode = utils.cmode.toggle }, core)
 ---api.comment.blockwise.current(motion?, config?)
 ---api.comment.blockwise.count(count, config?)
 ---@usage ]]
-api.comment = setmetatable({ cmode = utils.cmode.comment }, core)
+meta.comment = setmetatable({ cmode = utils.cmode.comment }, core)
 
 ---@tag comment.api.uncomment.linewise
 ---@tag comment.api.uncomment.blockwise
@@ -154,7 +154,7 @@ api.comment = setmetatable({ cmode = utils.cmode.comment }, core)
 ---api.uncomment.blockwise.current(motion?, config?)
 ---api.uncomment.blockwise.count(count, config?)
 ---@usage ]]
-api.uncomment = setmetatable({ cmode = utils.cmode.uncomment }, core)
+meta.uncomment = setmetatable({ cmode = utils.cmode.uncomment }, core)
 
 ---Provides API to to insert comment on previous, next or at the end-of-line.
 ---Every function takes an optional {config} parameter.
@@ -172,7 +172,7 @@ api.uncomment = setmetatable({ cmode = utils.cmode.uncomment }, core)
 ---api.insert.blockwise.below(config?)
 ---api.insert.blockwise.eol(config?)
 ---@usage ]]
-api.insert = setmetatable({}, {
+meta.insert = setmetatable({}, {
 	__index = function(_, comment_type)
 		return {
 			above = function(user_config)
@@ -213,7 +213,7 @@ api.insert = setmetatable({}, {
 ---    lockmarks lua require('Comment.api').toggle.linewise.current()
 ---]])
 ---@usage ]]
-function api.locked(fn_name)
+function meta.locked(fn_name)
 	return function(motion)
 		return vim.api.nvim_command(
 			('lockmarks lua require("Comment.api").%s(%s)'):format(fn_name, motion and ("%q"):format(motion))
@@ -241,7 +241,7 @@ end
 ---    { expr = true }
 ---)
 ---@usage ]]
-function api.call(fn_name, op_mode)
+function meta.call(fn_name, op_mode)
 	return function()
 		vim.o.operatorfunc = ("v:lua.require'Comment.api'.locked'%s'"):format(fn_name)
 		config_import.position = config_import:get().sticky and vim.api.nvim_win_get_cursor(0) or nil
@@ -249,4 +249,4 @@ function api.call(fn_name, op_mode)
 	end
 end
 
-return api
+return meta
