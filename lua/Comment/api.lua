@@ -10,15 +10,20 @@ local utils = require("Comment.utils")
 local opfunc = require("Comment.opfunc")
 local extra = require("Comment.extra")
 
-local meta, core = {}, {}
+---@class ApiMetaTable : table
+local meta = {}
+---@class ApiCoreTable : table
+local core = {}
 
+---@class ApiInstance
+---@field mode CommentMode
 ---API metamethods
----@param instance table
+---@param instance ApiInstance
 ---@param comment_type CommentType
 ---@return table
 function core.__index(instance, comment_type)
 	local line_count_methods = {}
-	local mode, type = instance.cmode, utils.ctype[comment_type]
+	local mode, type = instance.mode, utils.com_param_enums.type[comment_type]
 
 	---To comment the current-line
 	---NOTE:
@@ -106,7 +111,7 @@ end
 ---    api.toggle.blockwise(vim.fn.visualmode())
 ---end)
 ---@usage ]]
-meta.toggle = setmetatable({ cmode = utils.cmode.toggle }, core)
+meta.toggle = setmetatable({ mode = utils.com_param_enums.mode.toggle }, core)
 
 ---@tag comment.api.comment.linewise
 ---@tag comment.api.comment.blockwise
@@ -130,7 +135,7 @@ meta.toggle = setmetatable({ cmode = utils.cmode.toggle }, core)
 ---api.comment.blockwise.current(motion?, config?)
 ---api.comment.blockwise.count(count, config?)
 ---@usage ]]
-meta.comment = setmetatable({ cmode = utils.cmode.comment }, core)
+meta.comment = setmetatable({ mode = utils.com_param_enums.mode.comment }, core)
 
 ---@tag comment.api.uncomment.linewise
 ---@tag comment.api.uncomment.blockwise
@@ -154,7 +159,7 @@ meta.comment = setmetatable({ cmode = utils.cmode.comment }, core)
 ---api.uncomment.blockwise.current(motion?, config?)
 ---api.uncomment.blockwise.count(count, config?)
 ---@usage ]]
-meta.uncomment = setmetatable({ cmode = utils.cmode.uncomment }, core)
+meta.uncomment = setmetatable({ mode = utils.com_param_enums.mode.uncomment }, core)
 
 ---Provides API to to insert comment on previous, next or at the end-of-line.
 ---Every function takes an optional {config} parameter.
@@ -176,13 +181,13 @@ meta.insert = setmetatable({}, {
 	__index = function(_, comment_type)
 		return {
 			above = function(user_config)
-				utils.catch(extra.insert_above, utils.ctype[comment_type], user_config or config_import:get())
+				utils.catch(extra.insert_above, utils.com_param_enums.type[comment_type], user_config or config_import:get())
 			end,
 			below = function(user_config)
-				utils.catch(extra.insert_below, utils.ctype[comment_type], user_config or config_import:get())
+				utils.catch(extra.insert_below, utils.com_param_enums.type[comment_type], user_config or config_import:get())
 			end,
 			eol = function(user_config)
-				utils.catch(extra.insert_eol, utils.ctype[comment_type], user_config or config_import:get())
+				utils.catch(extra.insert_eol, utils.com_param_enums.type[comment_type], user_config or config_import:get())
 			end,
 		}
 	end,

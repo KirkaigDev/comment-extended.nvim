@@ -69,6 +69,7 @@
 ---with the default configuration.
 ---@brief ]]
 
+---@class InitMetaTable : table
 local meta = {}
 
 ---Configures the plugin
@@ -142,27 +143,27 @@ function meta.setup(config)
 			local ft_api = require("Comment.ft")
 			keybind("i", config_import.toggler.insert, function()
 				vim.cmd("stopinsert")
-				local column = vim.fn.virtcol(".")
+				local cursor_col = vim.fn.virtcol(".")
 				local char_count_before = vim.fn.virtcol("$") - 1
 
 				vim.cmd("normal! " .. api.call("toggle.linewise.current", "g@$")())
 
 				local char_count_after = vim.fn.virtcol("$") - 1
 
-				local updated_column = 0
+				local updated_curs_col = 0
 				if ft_api.get(vim.bo.filetype)[1] == ft_api.get(vim.bo.filetype)[2] then
-					updated_column = ((char_count_after - char_count_before) / 2) + column
+					updated_curs_col = ((char_count_after - char_count_before) / 2) + cursor_col
 				else
-					updated_column = (char_count_after - char_count_before) + column
+					updated_curs_col = (char_count_after - char_count_before) + cursor_col
 				end
 
 				local insert_key = "a"
-				if updated_column == 1 then
+				if updated_curs_col == 1 then
 					insert_key = "i"
 				else
-					updated_column = updated_column - 1
+					updated_curs_col = updated_curs_col - 1
 				end
-				vim.api.nvim_feedkeys(tostring(updated_column) .. "|" .. insert_key, "n", false)
+				vim.api.nvim_feedkeys(tostring(updated_curs_col) .. "|" .. insert_key, "n", false)
 			end, { desc = "toggle single line comments" })
 		end
 	end

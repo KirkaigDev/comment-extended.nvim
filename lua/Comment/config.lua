@@ -141,12 +141,4 @@ function meta:get()
 	return self.config
 end
 
----@export Config
-return setmetatable(meta, {
-	__index = function(this, key)
-		return this.state[key]
-	end,
-	__newindex = function(this, key, value)
-		this.state[key] = value
-	end,
-})
+return meta

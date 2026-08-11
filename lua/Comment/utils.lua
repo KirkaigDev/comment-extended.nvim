@@ -2,21 +2,22 @@
 
 local filetypes = require("Comment.ft")
 
+---@class UtilsMetaTable : table
 local meta = {}
 
 ---Comment context
 ---@class CommentCtx
----@field ctype integer See |comment.utils.ctype|
----@field cmode integer See |comment.utils.cmode|
----@field cmotion integer See |comment.utils.cmotion|
+---@field type integer See |comment.utils.ctype|
+---@field mode integer See |comment.utils.cmode|
+---@field motion integer See |comment.utils.cmotion|
 ---@field range CommentRange
 
 ---Range of the selection that needs to be commented
 ---@class CommentRange
----@field srow integer Starting row
----@field scol integer Starting column
----@field erow integer Ending row
----@field ecol integer Ending column
+---@field start_row integer Starting row
+---@field start_col integer Starting column
+---@field end_row integer Ending row
+---@field end_col integer Ending column
 
 ---Comment modes - Can be manual or computed via operator-mode
 ---@class CommentMode
@@ -24,45 +25,45 @@ local meta = {}
 ---@field comment integer Comment action
 ---@field uncomment integer Uncomment action
 
----An object containing comment modes
----@type CommentMode
-meta.cmode = {
-	toggle = 1,
-	comment = 2,
-	uncomment = 3,
-}
-
 ---Comment types
 ---@class CommentType
 ---@field linewise integer Use linewise commentstring
 ---@field blockwise integer Use blockwise commentstring
 
----An object containing comment types
----@type CommentType
-meta.ctype = {
-	linewise = 1,
-	blockwise = 2,
-}
-
 ---Comment motion types
 ---@class CommentMotion
 ---@field line integer Line motion (ie. 'gc2j')
 ---@field char integer Character/left-right motion (ie. 'gc2w')
----@field block integer Visual operator-pending motion
----@field v integer Visual motion (ie. 'v3jgc')
----@field V integer Visual-line motion (ie. 'V10kgc')
+---@field visual integer Visual motion (ie. 'v3jgc')
+---@field visual_line integer Visual-line motion (ie. 'V10kgc')
+---@field visual_block integer Visual operator-pending motion
 
----An object containing comment motions
----@type CommentMotion
-meta.cmotion = {
-	line = 1,
-	char = 2,
-	block = 3,
-	v = 4,
-	V = 5,
+
+---@class CommentParamEnums
+---@field mode CommentMode
+---@field type CommentType
+---@field motion CommentMotion
+
+---@type CommentParamEnums
+meta.com_param_enums = {
+	mode = {
+		toggle = 1,
+		comment = 2,
+		uncomment = 3,
+	},
+	type = {
+		linewise = 1,
+		blockwise = 2,
+	},
+	motion = {
+		line = 1,
+		char = 2,
+		visual = 3,
+		visual_line = 4,
+		visual_block = 5,
+	},
 }
 
----@private
 ---Check whether the line is empty
 ---@param iter string|string[]
 ---@return boolean
@@ -70,11 +71,10 @@ function meta.is_empty(iter)
 	return #iter == 0
 end
 
----@private
 ---Helper to get padding character
 ---@param flag boolean
 ---@return string string
-function meta.get_pad(flag)
+function meta.get_padding(flag)
 	return flag and " " or ""
 end
 
@@ -86,7 +86,6 @@ function meta.get_padpat(flag)
 	return flag and "%s?" or ""
 end
 
----@private
 ---Call a function if exists
 ---@param fn unknown|fun(...):unknown Wanna be function
 ---@return unknown
@@ -97,7 +96,6 @@ function meta.is_fn(fn, ...)
 	return fn
 end
 
----@private
 ---Check if the given line is ignored or not with the given pattern
 ---@param ignore_line string Line to be ignored
 ---@param pattern string Lua regex
@@ -113,13 +111,25 @@ end
 function meta.get_region(opmode)
 	if not opmode then
 		local row = unpack(vim.api.nvim_win_get_cursor(0))
-		return { srow = row, scol = 0, erow = row, ecol = 0 }
+		---@type CommentRange
+		return {
+			start_row = row,
+			start_col = 0,
+			end_row = row,
+			end_col = 0
+		}
 	end
 
 	local marks = string.match(opmode, "[vV]") and { "<", ">" } or { "[", "]" }
 	local sln, eln = vim.api.nvim_buf_get_mark(0, marks[1]), vim.api.nvim_buf_get_mark(0, marks[2])
 
-	return { srow = sln[1], scol = sln[2], erow = eln[1], ecol = eln[2] }
+	---@type CommentRange
+	return {
+		start_row = sln[1],
+		start_col = sln[2],
+		end_row = eln[1],
+		end_col = eln[2]
+	}
 end
 
 ---Get lines from the current position to the given count
@@ -127,11 +137,17 @@ end
 ---@return string[] #List of lines
 ---@return CommentRange
 function meta.get_count_lines(count)
-	local srow = unpack(vim.api.nvim_win_get_cursor(0))
-	local erow = (srow + count) - 1
-	local lines = vim.api.nvim_buf_get_lines(0, srow - 1, erow, false)
+	local start_row = unpack(vim.api.nvim_win_get_cursor(0))
+	local end_row = (start_row + count) - 1
+	local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
+	local range = {
+		start_row = start_row,
+		start_col = 0,
+		end_row = end_row,
+		end_col = 0
+	}
 
-	return lines, { srow = srow, scol = 0, erow = erow, ecol = 0 }
+	return lines, range
 end
 
 ---Get lines from a NORMAL/VISUAL mode
@@ -139,26 +155,32 @@ end
 ---@return string[] #List of lines
 function meta.get_lines(range)
 	-- If start and end is same, then just return the current line
-	if range.srow == range.erow then
+	if range.start_row == range.end_row then
 		return { vim.api.nvim_get_current_line() }
 	end
 
-	return vim.api.nvim_buf_get_lines(0, range.srow - 1, range.erow, false)
+	return vim.api.nvim_buf_get_lines(0, range.start_row - 1, range.end_row, false)
 end
 
+---@class UnwrapComStrReturn
+---@field com_mark_prefix string Left side of the commentstring
+---@field com_mark_suffix string Right side of the commentstring
+---@private
 ---Validates and unwraps the given commentstring
----@param com_str string See 'commentstring'
----@return string string Left side of the commentstring
----@return string string Right side of the commentstring
-function meta.unwrap_cstr(com_str)
-	local left, right = string.match(com_str, "(.*)%%s(.*)")
+---@param com_str_line string See 'commentstring'
+---@return UnwrapComStrReturn
+function meta.unwrap_com_str(com_str_line)
+	local left, right = string.match(com_str_line, "(.*)%%s(.*)")
 
 	assert(
 		(left or right),
 		{ msg = string.format("Invalid commentstring for %s! Read `:h commentstring` for help.", vim.bo.filetype) }
 	)
 
-	return vim.trim(left), vim.trim(right)
+	return {
+		com_mark_prefix = vim.trim(left),
+		com_mark_suffix = vim.trim(right)
+	}
 end
 
 ---Parses commentstring from the following places in the respective order
@@ -167,20 +189,19 @@ end
 ---  3. commentstring - Neovim's native. See 'commentstring'
 ---@param user_config CommentConfig
 ---@param com_params CommentCtx
----@return string string Left side of the commentstring
----@return string string Right side of the commentstring
+---@return UnwrapComStrReturn
 function meta.parse_cstr(user_config, com_params)
 	-- 1. We ask `pre_hook` for a commentstring
 	local inbuilt = meta.is_fn(user_config.pre_hook, com_params)
 		-- 2. Calculate w/ the help of treesitter
 		or filetypes.calculate(com_params)
 
-	assert(inbuilt or (com_params.ctype ~= meta.ctype.blockwise), {
+	assert(inbuilt or (com_params.type ~= meta.com_param_enums.type.blockwise), {
 		msg = vim.bo.filetype .. " doesn't support block comments!",
 	})
 
 	-- 3. Last resort to use native commentstring
-	return meta.unwrap_cstr(inbuilt or vim.bo.commentstring)
+	return meta.unwrap_com_str(inbuilt or vim.bo.commentstring)
 end
 
 ---Returns a closure which is used to do comments
@@ -190,16 +211,16 @@ end
 ---@param com_marker_prefix string Left side of the commentstring
 ---@param com_marker_suffix string Right side of the commentstring
 ---@param padding boolean Is padding enabled?
----@param start_column? integer Starting column
----@param end_column? integer Ending column
+---@param start_col? integer Starting column
+---@param end_col? integer Ending column
 ---@param tabbed? boolean Using tab indentation
 ---@return fun(line: string|string[]):string|string[]
-function meta.commenter(com_marker_prefix, com_marker_suffix, padding, start_column, end_column, tabbed)
-	local pad = meta.get_pad(padding)
+function meta.commenter(com_marker_prefix, com_marker_suffix, padding, start_col, end_col, tabbed)
+	local pad = meta.get_padding(padding)
 	local com_mark_prefix_padded = meta.is_empty(com_marker_prefix) and com_marker_prefix or (com_marker_prefix .. pad)
 	local com_mark_suffix_padded = meta.is_empty(com_marker_suffix) and com_marker_suffix or (pad .. com_marker_suffix)
-	local empty = string.rep(tabbed and "\t" or " ", start_column or 0) .. com_marker_prefix .. com_marker_suffix
-	local is_linewise = start_column and not end_column
+	local empty = string.rep(tabbed and "\t" or " ", start_col or 0) .. com_marker_prefix .. com_marker_suffix
+	local is_linewise = start_col and not end_col
 
 	return function(line)
 		------------------
@@ -210,11 +231,11 @@ function meta.commenter(com_marker_prefix, com_marker_suffix, padding, start_col
 				return empty
 			end
 			-- line == 0 -> start from 0 col
-			if start_column == 0 then
+			if start_col == 0 then
 				return (com_mark_prefix_padded .. line .. com_mark_suffix_padded)
 			end
-			local first = string.sub(line --[[@as string]], 0, start_column)
-			local last = string.sub(line --[[@as string]], start_column + 1, -1)
+			local first = string.sub(line --[[@as string]], 0, start_col)
+			local last = string.sub(line --[[@as string]], start_col + 1, -1)
 			return first .. com_mark_prefix_padded .. last .. com_mark_suffix_padded
 		end
 
@@ -224,11 +245,11 @@ function meta.commenter(com_marker_prefix, com_marker_suffix, padding, start_col
 		if type(line) == "table" then
 			local first, last = line[1], line[#line]
 			-- If both columns are given then we can assume it's a partial block
-			if start_column and end_column then
-				local sfirst = string.sub(first, 0, start_column)
-				local slast = string.sub(first, start_column + 1, -1)
-				local efirst = string.sub(last, 0, end_column + 1)
-				local elast = string.sub(last, end_column + 2, -1)
+			if start_col and end_col then
+				local sfirst = string.sub(first, 0, start_col)
+				local slast = string.sub(first, start_col + 1, -1)
+				local efirst = string.sub(last, 0, end_col + 1)
+				local elast = string.sub(last, end_col + 2, -1)
 				line[1] = sfirst .. com_mark_prefix_padded .. slast
 				line[#line] = efirst .. com_mark_suffix_padded .. elast
 			else
@@ -242,12 +263,12 @@ function meta.commenter(com_marker_prefix, com_marker_suffix, padding, start_col
 		-- for current-line blockwise --
 		--------------------------------
 		-- SOURCE: https://github.com/numToStr/Comment.nvim/issues/224
-		if end_column > #line then
+		if end_col > #line then
 			return com_mark_prefix_padded .. line .. com_mark_suffix_padded
 		end
-		local first = string.sub(line, 0, start_column)
-		local mid = string.sub(line, start_column + 1, end_column + 1)
-		local last = string.sub(line, end_column + 2, -1)
+		local first = string.sub(line, 0, start_col)
+		local mid = string.sub(line, start_col + 1, end_col + 1)
+		local last = string.sub(line, end_col + 2, -1)
 		return first .. com_mark_prefix_padded .. mid .. com_mark_suffix_padded .. last
 	end
 end
@@ -370,7 +391,6 @@ function meta.is_commented(com_mark_prefix, com_mark_suffix, padding, start_col,
 	end
 end
 
----@private
 ---Error handler
 ---@param ... unknown
 function meta.catch(fn, ...)

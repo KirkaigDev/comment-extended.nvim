@@ -203,6 +203,7 @@ local lang_cstr_table = setmetatable({
 	end,
 })
 
+---@class FiletypesMetaTable : table
 local meta = {}
 
 ---Sets a commentstring(s) for a filetype/language
@@ -296,7 +297,7 @@ function meta.calculate(comment_params)
 	local _, parser = pcall(vim.treesitter.get_parser, vim.api.nvim_get_current_buf())
 
 	if not parser then
-		local filetype_comment = meta.get(vim.bo.filetype, comment_params.ctype) --[[ @as string ]]
+		local filetype_comment = meta.get(vim.bo.filetype, comment_params.type) --[[ @as string ]]
 
 		if not filetype_comment and config:get().optimistic_comments then
 			return config:get().optimistic_comments_syntax --[[ @as string ]]
@@ -305,24 +306,13 @@ function meta.calculate(comment_params)
 	end
 
 	local lang = meta.contains(parser, {
-		comment_params.range.srow - 1,
-		comment_params.range.scol,
-		comment_params.range.erow - 1,
-		comment_params.range.ecol,
+		comment_params.range.start_row - 1,
+		comment_params.range.start_col,
+		comment_params.range.end_row - 1,
+		comment_params.range.end_col,
 	}):lang()
 
-	return meta.get(lang, comment_params.ctype) or meta.get(vim.bo.filetype, comment_params.ctype) --[[ @as string ]]
+	return meta.get(lang, comment_params.type) or meta.get(vim.bo.filetype, comment_params.type) --[[ @as string ]]
 end
 
----@export meta
-return setmetatable(meta, {
-	__newindex = function(this, key, value)
-		this.set(key, value)
-	end,
-	__call = function(this, langs, spec)
-		for _, lang in ipairs(langs) do
-			this.set(lang, spec)
-		end
-		return this
-	end,
-})
+return meta

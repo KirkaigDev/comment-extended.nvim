@@ -5,14 +5,16 @@
 
 local utils = require("Comment.utils")
 
+---@class ExtraMetaTable : table
 local meta = {}
 
 -- FIXME This prints `a` in i_CTRL-o
 ---Moves the cursor and enters INSERT mode
+-- NOTE: Avoid feedkeys when possible
 ---@param start_row integer Starting row
----@param end_column integer Ending column
-local function move_n_insert(start_row, end_column)
-	vim.api.nvim_win_set_cursor(0, { start_row, end_column })
+---@param end_col integer Ending column
+local function move_n_insert(start_row, end_col)
+	vim.api.nvim_win_set_cursor(0, { start_row, end_col })
 	vim.api.nvim_feedkeys("a", "ni", true)
 end
 
@@ -24,29 +26,30 @@ local function ins_on_line(line_index, comment_type, user_config)
 
 	---@type CommentCtx
 	local comment_params = {
-		cmode = utils.cmode.comment,
-		cmotion = utils.cmotion.line,
-		ctype = comment_type,
+		mode = utils.com_param_enums.mode.comment,
+		motion = utils.com_param_enums.motion.line,
+		type = comment_type,
 		range = {
-			srow = row,
-			scol = col,
-			erow = row,
-			ecol = col
+			start_row = row,
+			start_col = col,
+			end_row = row,
+			end_col = col
 		},
 	}
 
 	local start_row = row + line_index
-	local com_marker_prefix, com_marker_suffix = utils.parse_cstr(user_config, comment_params)
-	local padding = utils.get_pad(utils.is_fn(user_config.padding))
+	local com_split = utils.parse_cstr(user_config, comment_params)
+	local com_marker_prefix, com_marker_suffix = com_split.com_mark_prefix, com_split.com_mark_suffix
+	local padding = utils.get_padding(utils.is_fn(user_config.padding))
 
 	-- We need RHS of cstr, if we are doing block comments or if RHS exists
 	-- because even in line comment RHS do exists for some filetypes like jsx_element, ocaml
-	local if_rcs = utils.is_empty(com_marker_suffix) and com_marker_suffix or padding .. com_marker_suffix
+	local com_mark_suffix_padded = utils.is_empty(com_marker_suffix) and com_marker_suffix or padding .. com_marker_suffix
 
-	vim.api.nvim_buf_set_lines(0, start_row, start_row, false, { com_marker_prefix .. padding .. if_rcs })
+	vim.api.nvim_buf_set_lines(0, start_row, start_row, false, { com_marker_prefix .. padding .. com_mark_suffix_padded })
 	vim.api.nvim_win_set_cursor(0, { start_row + 1, 0 })
 	vim.api.nvim_command("normal! ==")
-	move_n_insert(start_row + 1, #vim.api.nvim_get_current_line() - #if_rcs - 1)
+	move_n_insert(start_row + 1, #vim.api.nvim_get_current_line() - #com_mark_suffix_padded - 1)
 	utils.is_fn(user_config.post_hook, comment_params)
 end
 
@@ -67,25 +70,27 @@ end
 ---Add a comment at the end of current line and goes to INSERT mode
 ---@param comment_type integer See |comment.utils.ctype|
 ---@param user_config CommentConfig
+---@return nil
 function meta.insert_eol(comment_type, user_config)
 	local start_row, start_col = unpack(vim.api.nvim_win_get_cursor(0))
 
 	---@type CommentCtx
 	local comment_params = {
-		cmode = utils.cmode.comment,
-		cmotion = utils.cmotion.line,
-		ctype = comment_type,
+		mode = utils.com_param_enums.mode.comment,
+		motion = utils.com_param_enums.motion.line,
+		type = comment_type,
 		range = {
-			srow = start_row,
-			scol = start_col,
-			erow = start_row,
-			ecol = start_col
+			start_row = start_row,
+			start_col = start_col,
+			end_row = start_row,
+			end_col = start_col
 		},
 	}
-	local com_marker_prefix, com_marker_suffix = utils.parse_cstr(user_config, comment_params)
+	local com_split = utils.parse_cstr(user_config, comment_params)
+	local com_marker_prefix, com_marker_suffix = com_split.com_mark_prefix, com_split.com_mark_suffix
 
 	local line = vim.api.nvim_get_current_line()
-	local padding = utils.get_pad(utils.is_fn(user_config.padding))
+	local padding = utils.get_padding(utils.is_fn(user_config.padding))
 
 	-- We need RHS of cstr, if we are doing block comments or if RHS exists
 	-- because even in line comment RHS do exists for some filetypes like jsx_element, ocaml
