@@ -10,188 +10,168 @@ local utils = require("Comment.utils")
 local opfunc = require("Comment.opfunc")
 local extra = require("Comment.extra")
 
----@class ApiMetaTable : table
-local meta = {}
----@class ApiCoreTable : table
-local core = {}
+---@class ApiMetaTable: table
+local meta = {
+	toggle = {},
+	comment = {},
+	uncomment = {},
+	insert = {}
+}
 
----@class ApiInstance
----@field mode CommentMode
----API metamethods
----@param instance ApiInstance
----@param comment_type CommentType
----@return table
-function core.__index(instance, comment_type)
-	local line_count_methods = {}
-	local mode, type = instance.mode, utils.com_param_enums.type[comment_type]
+---@class RangeTypeEnums
+---@field full_line integer
+---@field motion integer vim motions
+---@field lines integer
 
-	---To comment the current-line
-	---NOTE:
-	---In current-line linewise method, 'opmode' is not useful which is always equals to `char`
-	---but we need 'nil' here which is used for current-line
-	function line_count_methods.current(_, user_config)
-		utils.catch(opfunc.opfunc, nil, user_config or config_import:get(), mode, type)
+---@type RangeTypeEnums
+local range_types = {
+	full_line = 1,
+	motion = 2,
+	lines = 3
+}
+
+---@class ApiExecuteCommentParams
+---@field mode integer
+---@field range_type integer
+---@field op_motion? OpMotion
+---@field line_count? integer
+---@field user_config CommentConfig
+---@field style integer
+
+---@alias ApiExecuteCommentFn fun(opts: ApiExecuteCommentParams)
+---@return nil
+
+---@type ApiExecuteCommentFn
+local function execute_comment(opts)
+	local user_config = opts.user_config or config_import:get()
+	local line_count = opts.line_count or vim.api.nvim_get_vvar("count")
+
+	if opts.range_type == range_types.motion then
+		utils.catch(opfunc.opfunc, opts.op_motion, user_config, opts.mode, opts.style)
+
+	elseif opts.range_type == range_types.lines then
+		utils.catch(opfunc.count, line_count, user_config, opts.mode, opts.style)
+
+    elseif opts.range_type == range_types.full_line then
+        utils.catch(opfunc.opfunc, nil, user_config, opts.mode, opts.style)
 	end
-
-	---To comment lines with a count
-	function line_count_methods.count(count, user_config)
-		utils.catch(opfunc.count, count or vim.api.nvim_get_vvar("count"), user_config or config_import:get(), mode, type)
-	end
-
-	---@private
-	---To comment lines with a count, also dot-repeatable
-	---WARN: This is not part of the API but anyone case use it, if they want
-	function line_count_methods.count_repeat(_, count, user_config)
-		line_count_methods.count(count, user_config)
-	end
-
-	return setmetatable({}, {
-		__index = line_count_methods,
-		__call = function(_, motion, user_config)
-			utils.catch(opfunc.opfunc, motion, user_config or config_import:get(), mode, type)
-		end,
-	})
 end
 
----@tag comment.api.toggle.linewise
----@tag comment.api.toggle.blockwise
----Provides API to toggle comments over a region, on current-line, or with a
----count using line or block comment string.
----
----Every function takes a {motion} argument, except '*.count()' function which
----takes an {count} argument, and an optional {config} parameter.
----@type table A metatable containing API functions
----@see comment.opfunc.OpMotion
----@see comment.config
----@usage [[
----local api = require('Comment.api')
----local config = require('Comment.config'):get()
----
----api.toggle.linewise(motion, config?)
----api.toggle.linewise.current(motion?, config?)
----api.toggle.linewise.count(count, config?)
----
----api.toggle.blockwise(motion, config?)
----api.toggle.blockwise.current(motion?, config?)
----api.toggle.blockwise.count(count, config?)
----
------ Toggle current line (linewise) using C-/
----vim.keymap.set('n', '<C-_>', api.toggle.linewise.current)
----
------ Toggle current line (blockwise) using C-\
----vim.keymap.set('n', '<C-\\>', api.toggle.blockwise.current)
----
------ Toggle lines (linewise) with dot-repeat support
------ Example: <leader>gc3j will comment 4 lines
----vim.keymap.set(
----    'n', '<leader>gc', api.call('toggle.linewise', 'g@'),
----    { expr = true }
----)
----
------ Toggle lines (blockwise) with dot-repeat support
------ Example: <leader>gb3j will comment 4 lines
----vim.keymap.set(
----    'n', '<leader>gb', api.call('toggle.blockwise', 'g@'),
----    { expr = true }
----)
----
----local esc = vim.api.nvim_replace_termcodes(
----    '<ESC>', true, false, true
----)
----
------ Toggle selection (linewise)
----vim.keymap.set('x', '<leader>c', function()
----    vim.api.nvim_feedkeys(esc, 'nx', false)
----    api.toggle.linewise(vim.fn.visualmode())
----end)
----
------ Toggle selection (blockwise)
----vim.keymap.set('x', '<leader>b', function()
----    vim.api.nvim_feedkeys(esc, 'nx', false)
----    api.toggle.blockwise(vim.fn.visualmode())
----end)
----@usage ]]
-meta.toggle = setmetatable({ mode = utils.com_param_enums.mode.toggle }, core)
+---@class ApiFunctionsTable
+---@field current fun(_, user_config: CommentConfig): nil
+---@field count fun(_, line_count: integer, user_config: CommentConfig): nil
 
----@tag comment.api.comment.linewise
----@tag comment.api.comment.blockwise
----Provides API to (only) comment a region, on current-line, or with a
----count using line or block comment string.
----
----Every function takes a {motion} argument, except '*.count()' function which
----takes an {count} argument, and an optional {config} parameter.
----@type table A metatable containing API functions
----@see comment.opfunc.OpMotion
----@see comment.config
----@usage [[
----local api = require('Comment.api')
----local config = require('Comment.config'):get()
----
----api.comment.linewise(motion, config?)
----api.comment.linewise.current(motion?, config?)
----api.comment.linewise.count(count, config?)
----
----api.comment.blockwise(motion, config?)
----api.comment.blockwise.current(motion?, config?)
----api.comment.blockwise.count(count, config?)
----@usage ]]
-meta.comment = setmetatable({ mode = utils.com_param_enums.mode.comment }, core)
+---@alias ApiFunctionsTableCall fun(_, motion: OpMotion, user_config: CommentConfig)
+---@return nil
 
----@tag comment.api.uncomment.linewise
----@tag comment.api.uncomment.blockwise
----Provides API to (only) uncomment a region, on current-line, or with a
----count using line or block comment string.
----
----Every function takes a {motion} argument, except '*.count()' function which
----takes an {count} argument, and an optional {config} parameter.
----@type table A metatable containing API functions
----@see comment.opfunc.OpMotion
----@see comment.config
----@usage [[
----local api = require('Comment.api')
----local config = require('Comment.config'):get()
----
----api.uncomment.linewise(motion, config?)
----api.uncomment.linewise.current(motion?, config?)
----api.uncomment.linewise.count(count, config?)
----
----api.uncomment.blockwise(motion, config?)
----api.uncomment.blockwise.current(motion?, config?)
----api.uncomment.blockwise.count(count, config?)
----@usage ]]
-meta.uncomment = setmetatable({ mode = utils.com_param_enums.mode.uncomment }, core)
+---@param mode integer
+---@param style integer
+---@return ApiFunctionsTable | ApiFunctionsTableCall
+local function init_api(mode, style)
+	---@type ApiFunctionsTable
+	local created_api_table = {
+		current = function(_, user_config)
+			execute_comment({
+				mode = mode,
+				style = style,
+				range_type = range_types.full_line,
+				user_config = user_config
+			})
+		end,
 
----Provides API to to insert comment on previous, next or at the end-of-line.
----Every function takes an optional {config} parameter.
----@type table A metatable containing API functions
----@see comment.config
----@usage [[
----local api = require('Comment.api')
----local config = require('Comment.config'):get()
----
----api.insert.linewise.above(config?)
----api.insert.linewise.below(config?)
----api.insert.linewise.eol(config?)
----
----api.insert.blockwise.above(config?)
----api.insert.blockwise.below(config?)
----api.insert.blockwise.eol(config?)
----@usage ]]
-meta.insert = setmetatable({}, {
-	__index = function(_, comment_type)
-		return {
-			above = function(user_config)
-				utils.catch(extra.insert_above, utils.com_param_enums.type[comment_type], user_config or config_import:get())
-			end,
-			below = function(user_config)
-				utils.catch(extra.insert_below, utils.com_param_enums.type[comment_type], user_config or config_import:get())
-			end,
-			eol = function(user_config)
-				utils.catch(extra.insert_eol, utils.com_param_enums.type[comment_type], user_config or config_import:get())
-			end,
-		}
-	end,
-})
+		count = function(_, line_count, user_config)
+			execute_comment({
+				mode = mode,
+				style = style,
+				range_type = range_types.lines,
+				line_count = line_count,
+				user_config = user_config
+			})
+		end,
+	}
+
+	setmetatable(created_api_table, {
+		---@type ApiFunctionsTableCall
+		__call = function(_, motion, user_config)
+			execute_comment({
+				mode = mode,
+				style = style,
+				range_type = range_types.motion,
+				op_motion = motion,
+				user_config = user_config
+			})
+		end,
+	})
+
+	return created_api_table
+end
+
+for mode_name, mode_id in pairs(utils.com_param_enums.mode) do
+	meta[mode_name]["linewise"] = init_api(mode_id, utils.com_param_enums.type.linewise)
+	meta[mode_name]["blockwise"] = init_api(mode_id, utils.com_param_enums.type.blockwise)
+end
+
+---@alias ApiInsertMethodFns fun(user_config: CommentConfig)
+---@return nil
+
+---@class ApiInsertMethods
+---@field above ApiInsertMethodFns
+---@field below ApiInsertMethodFns
+---@field eol ApiInsertMethodFns
+
+---@class ApiInsertTable
+---@field linewise ApiInsertMethods
+---@field blockwise ApiInsertMethods
+
+---@type ApiInsertTable
+meta.insert = {
+	linewise = {
+		above = function(user_config)
+			utils.catch(
+				extra.insert_above,
+				utils.com_param_enums.type.linewise,
+				user_config or config_import:get()
+			)
+		end,
+		below = function(user_config)
+			utils.catch(
+				extra.insert_below,
+				utils.com_param_enums.type.linewise,
+				user_config or config_import:get()
+			)
+		end,
+		eol = function(user_config)
+			utils.catch(
+				extra.insert_eol,
+				utils.com_param_enums.type.linewise,
+				user_config or config_import:get()
+			)
+		end
+	},
+	blockwise = {
+		above = function(user_config)
+			utils.catch(
+				extra.insert_above,
+				utils.com_param_enums.type.blockwise,
+				user_config or config_import:get()
+			)
+		end,
+		below = function(user_config)
+			utils.catch(
+				extra.insert_below,
+				utils.com_param_enums.type.blockwise,
+				user_config or config_import:get()
+			)
+		end,
+		eol = function(user_config)
+			utils.catch(
+				extra.insert_eol,
+				utils.com_param_enums.type.blockwise,
+				user_config or config_import:get()
+			)
+		end
+	}
+}
 
 ---Wraps the given API function with 'lockmarks' to preserve marks/jumps
 ---@param fn_name string Name of API function
