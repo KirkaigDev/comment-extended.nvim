@@ -157,6 +157,7 @@ local L = setmetatable({
 	scheme = { M.lisp_l, M.lisp_b },
 	scss = { M.cxx_b, M.cxx_b },
 	sh = { M.hash },
+	slint = { M.cxx_l, M.cxx_b },
 	solidity = { M.cxx_l, M.cxx_b },
 	sql = { M.dash, M.cxx_b },
 	stata = { M.cxx_l, M.cxx_b },
